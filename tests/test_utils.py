@@ -70,12 +70,20 @@ class TestIsPlanary:
         assert is_planary(g)
 
     def test_complete_k5(self) -> None:
-        g = Graph[int].from_edges([
-            (1, 2), (1, 3), (1, 4), (1, 5),
-            (2, 3), (2, 4), (2, 5),
-            (3, 4), (3, 5),
-            (4, 5),
-        ])
+        g = Graph[int].from_edges(
+            [
+                (1, 2),
+                (1, 3),
+                (1, 4),
+                (1, 5),
+                (2, 3),
+                (2, 4),
+                (2, 5),
+                (3, 4),
+                (3, 5),
+                (4, 5),
+            ]
+        )
         assert not is_planary(g)
 
     def test_tree(self) -> None:

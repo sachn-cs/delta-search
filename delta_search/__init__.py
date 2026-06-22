@@ -14,17 +14,59 @@ Public API:
     SubgraphState: Protocol for state objects.
     SolverObserver: Observer protocol for solver lifecycle events.
     GreedySolver: Greedy optimization loop.
+    MultiStartSolver: Multi-start solver for improved solution quality.
+    BeamSearchSolver: Beam search solver for parallel candidate evaluation.
+    AnytimeSolver: Anytime solver with best-so-far tracking.
+    StreamingSolver: Dynamic graph streaming solver.
+    MultiObjectiveSolver: Multi-objective Pareto frontier solver.
+    LearnedGuidanceSolver: ML-guided search solver.
+    AdaptiveBeamSolver: Adaptive ordering beam ΔSearch.
+    AblationStudy: Ablation study framework.
+    ScalingStudy: Scaling analysis framework.
+    SubmodularAnalyzer: Theoretical guarantees analyzer.
+    ContextEngineeringSolver: ΔSearch for RAG context selection.
+    TestTimeComputeSolver: ΔSearch for reasoning tree expansion.
+    BudgetAwareEvaluator: Quality-per-token metrics.
+    HybridPipeline: Two-stage retrieval + reasoning pipeline.
     SolverState: Solver progress snapshot.
     EarlyTerminationCondition: Configurable stopping criteria.
     DefaultState: Generic mutable state for problems.
     ProblemType: Monotone vs non-monotone classification.
+
+Submodules:
+    benchmarks: Benchmark suite for comparing against paper results.
+    visualization: Plotting and export utilities.
+    progress: Progress bar and streaming output observers.
+    beam: Beam search solver.
+    anytime: Anytime search solver.
+    streaming: Dynamic graph streaming solver.
+    multi_objective: Multi-objective Pareto frontier solver.
+    learned: ML-guided search solver.
+    incremental: Incremental computation data structures.
+    ablation: Ablation study and scaling analysis.
+    theory: Theoretical guarantees for submodular problems.
+    context_engineering: ΔSearch for RAG context selection.
+    test_time_compute: ΔSearch for reasoning tree expansion.
+    budget_metrics: Budget-aware quality metrics.
+    adaptive_beam: Adaptive ordering beam ΔSearch.
+    hybrid_pipeline: Two-stage retrieval + reasoning pipeline.
 """
 
 from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError, version
 
+from .ablation import AblationStudy, ScalingStudy
+from .adaptive_beam import AdaptiveBeamSolver
+from .anytime import AnytimeResult, AnytimeSolver
+from .beam import BeamSearchResult, BeamSearchSolver
+from .budget_metrics import BudgetAwareEvaluator, BudgetMetric
+from .context_engineering import ContextEngineeringSolver
 from .graph import Graph, ThreadSafeGraph
+from .hybrid_pipeline import HybridPipeline
+from .learned import LearnedGuidanceSolver
+from .multi_objective import MultiObjectiveSolver, ObjectiveWeights
+from .multistart import MultiStartResult, MultiStartSolver
 from .problem import (
     Action,
     ActionType,
@@ -46,6 +88,9 @@ from .problems import (
     UncapacitatedFacilityLocationProblem,
 )
 from .solver import EarlyTerminationCondition, GreedySolver, SolverState
+from .streaming import StreamingResult, StreamingSolver
+from .test_time_compute import TestTimeComputeSolver
+from .theory import SubmodularAnalyzer
 
 __all__ = [
     "Graph",
@@ -59,6 +104,26 @@ __all__ = [
     "SubgraphState",
     "UndoEntry",
     "GreedySolver",
+    "MultiStartSolver",
+    "MultiStartResult",
+    "BeamSearchSolver",
+    "BeamSearchResult",
+    "AnytimeSolver",
+    "AnytimeResult",
+    "StreamingSolver",
+    "StreamingResult",
+    "MultiObjectiveSolver",
+    "ObjectiveWeights",
+    "LearnedGuidanceSolver",
+    "AdaptiveBeamSolver",
+    "BudgetAwareEvaluator",
+    "BudgetMetric",
+    "ContextEngineeringSolver",
+    "TestTimeComputeSolver",
+    "HybridPipeline",
+    "AblationStudy",
+    "ScalingStudy",
+    "SubmodularAnalyzer",
     "SolverState",
     "EarlyTerminationCondition",
     "DefaultState",

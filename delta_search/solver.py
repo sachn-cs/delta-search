@@ -51,7 +51,9 @@ class SolverState(Generic[NodeT]):
         elapsed_ms: Total elapsed time in milliseconds.
         converged: Whether the solver has converged.
         convergence_reason: Human-readable reason for termination.
+
     """
+
     iteration: int = 0
     best_objective: float = float("-inf")
     best_state: SubgraphState[NodeT] | None = None
@@ -74,7 +76,9 @@ class EarlyTerminationCondition(Generic[NodeT]):
         max_time_ms: Stop after this many milliseconds.
         objective_target: Stop when objective reaches this value.
         stall_iterations: Stop after this many iterations with no improvement.
+
     """
+
     max_iterations: int | None = None
     max_evaluations: int | None = None
     max_time_ms: float | None = None
@@ -92,20 +96,44 @@ class GreedySolver(Generic[NodeT]):
     3. Selects the feasible candidate with highest objective.
     4. Applies the selected action and advances the state.
 
+    The solver uses incremental evaluation: actions are applied
+    mutably to a temporary graph for evaluation, and only the
+    winning action is applied via ``apply_action`` (which creates
+    a full copy).  This eliminates redundant graph copies.
+
     Args:
         problem: A concrete SubgraphExtractionProblem instance.
         early_stop: Optional termination conditions.
 
     Raises:
         ValueError: If ``max_iterations <= 0``.
+
     """
+
     def __init__(
         self,
         problem: SubgraphExtractionProblem[NodeT],
         early_stop: EarlyTerminationCondition[NodeT] | None = None,
     ) -> None:
-        self.problem = problem
-        self.early_stop = early_stop or EarlyTerminationCondition()
+        """Initialize the greedy solver.
+
+        Args:
+            problem: A concrete SubgraphExtractionProblem instance.
+            early_stop: Optional termination conditions.
+
+        """
+        self._problem = problem
+        self._early_stop = early_stop or EarlyTerminationCondition()
+
+    @property
+    def problem(self) -> SubgraphExtractionProblem[NodeT]:
+        """The problem being solved."""
+        return self._problem
+
+    @property
+    def early_stop(self) -> EarlyTerminationCondition[NodeT]:
+        """The early termination conditions."""
+        return self._early_stop
 
     def solve(
         self,
@@ -124,18 +152,17 @@ class GreedySolver(Generic[NodeT]):
 
         Raises:
             ValueError: If ``max_iterations <= 0``.
+
         """
         if max_iterations <= 0:
-            raise ValueError(
-                f"max_iterations must be positive, got {max_iterations}"
-            )
+            raise ValueError(f"max_iterations must be positive, got {max_iterations}")
 
         if observer:
-            self.problem.set_observer(observer)
+            self._problem.set_observer(observer)
 
-        state = self.problem.evaluate_initial_state(self.problem.graph)
+        state = self._problem.evaluate_initial_state(self._problem.graph)
         best_state = state
-        best_objective = self.problem.objective(state)
+        best_objective = self._problem.objective(state)
 
         solver_state = SolverState[NodeT](
             best_objective=best_objective,
@@ -143,18 +170,20 @@ class GreedySolver(Generic[NodeT]):
         )
 
         limit = (
-            self.early_stop.max_iterations
-            if self.early_stop.max_iterations is not None
+            self._early_stop.max_iterations
+            if self._early_stop.max_iterations is not None
             else max_iterations
         )
         stall_count = 0
         start_time = time.monotonic()
 
         for iteration in range(limit):
-            self.problem.on_iteration_start(state, iteration)
+            self._problem.on_iteration_start(state, iteration)
 
-            best_action, best_action_obj, evaluated = (
-                self.evaluate_actions(state, best_objective, start_time)
+            best_action, best_action_obj, evaluated = self.evaluate_actions(
+                state,
+                best_objective,
+                start_time,
             )
             solver_state.total_evaluations += evaluated
 
@@ -178,17 +207,20 @@ class GreedySolver(Generic[NodeT]):
             else:
                 stall_count += 1
 
-            self.problem.observer.on_iteration_complete(
-                iteration, best_action, best_action_obj,
+            self._problem.observer.on_iteration_complete(
+                iteration,
+                best_action,
+                best_action_obj,
             )
-            self.problem.on_iteration_end(state, iteration)
+            self._problem.on_iteration_end(state, iteration)
 
             if self.check_termination(solver_state, stall_count):
                 break
 
         solver_state.elapsed_ms = (time.monotonic() - start_time) * 1000
-        self.problem.observer.on_convergence(
-            solver_state.iteration, solver_state.best_objective,
+        self._problem.observer.on_convergence(
+            solver_state.iteration,
+            solver_state.best_objective,
         )
 
         return solver_state
@@ -201,6 +233,11 @@ class GreedySolver(Generic[NodeT]):
     ) -> tuple[Action | None, float, int]:
         """Evaluate all candidate actions and select the best feasible one.
 
+        Uses incremental evaluation: actions are applied mutably to a
+        temporary graph copy, feasibility and objective are checked, and
+        the mutation is undone.  Only the winning action triggers a full
+        ``apply_action`` copy.
+
         Args:
             state: The current candidate state.
             current_objective: The objective value of the current state.
@@ -209,8 +246,9 @@ class GreedySolver(Generic[NodeT]):
         Returns:
             Tuple of (best_action, best_action_objective, num_evaluations).
             best_action is None if no feasible actions exist.
+
         """
-        actions = self.problem.enumerate_actions(state)
+        actions = self._problem.enumerate_actions(state)
         if not actions:
             return None, float("-inf"), 0
 
@@ -219,16 +257,15 @@ class GreedySolver(Generic[NodeT]):
         evaluated = 0
 
         for action in actions:
-            candidate = self.problem.apply_action(state, action)
-            if not self.problem.is_feasible(candidate):
+            delta = self._problem.calculate_delta(state, action)
+            if not delta.feasible:
                 continue
 
-            delta = self.problem.calculate_delta(state, action)
-            obj = self.problem.objective(candidate)
+            obj = current_objective + delta.reward_change - delta.penalty_change
             evaluated += 1
 
             elapsed = (time.monotonic() - start_time) * 1000
-            self.problem.observer.on_action_evaluated(
+            self._problem.observer.on_action_evaluated(
                 action,
                 delta,
                 elapsed,
@@ -253,8 +290,9 @@ class GreedySolver(Generic[NodeT]):
 
         Returns:
             The new state with the action applied.
+
         """
-        return self.problem.apply_action(state, action)
+        return self._problem.apply_action(state, action)
 
     def check_termination(
         self,
@@ -269,35 +307,36 @@ class GreedySolver(Generic[NodeT]):
 
         Returns:
             True if the solver should stop.
-        """
-        cond = self.early_stop
 
-        if (cond.max_evaluations is not None
-                and solver_state.total_evaluations >= cond.max_evaluations):
+        """
+        cond = self._early_stop
+
+        if (
+            cond.max_evaluations is not None
+            and solver_state.total_evaluations >= cond.max_evaluations
+        ):
             solver_state.converged = True
             solver_state.convergence_reason = (
                 f"reached {cond.max_evaluations} evaluations"
             )
             return True
 
-        if (cond.max_time_ms is not None
-                and solver_state.elapsed_ms >= cond.max_time_ms):
+        if cond.max_time_ms is not None and solver_state.elapsed_ms >= cond.max_time_ms:
             solver_state.converged = True
-            solver_state.convergence_reason = (
-                f"reached {cond.max_time_ms}ms time limit"
-            )
+            solver_state.convergence_reason = f"reached {cond.max_time_ms}ms time limit"
             return True
 
-        if (cond.objective_target is not None
-                and solver_state.best_objective >= cond.objective_target):
+        if (
+            cond.objective_target is not None
+            and solver_state.best_objective >= cond.objective_target
+        ):
             solver_state.converged = True
             solver_state.convergence_reason = (
                 f"reached objective target {cond.objective_target}"
             )
             return True
 
-        if (cond.stall_iterations is not None
-                and stall_count >= cond.stall_iterations):
+        if cond.stall_iterations is not None and stall_count >= cond.stall_iterations:
             solver_state.converged = True
             solver_state.convergence_reason = (
                 f"stalled for {cond.stall_iterations} iterations"

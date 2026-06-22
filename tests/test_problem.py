@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -23,12 +23,15 @@ from delta_search.problem import (
 # Concrete test problem
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class SimpleState:
     """Test state with a graph and a counter."""
+
     graph: Graph[int]
     counter: int = 0
     undo: object = None
+    metrics: dict[str, Any] = field(default_factory=dict)
 
 
 class SimpleProblem(SubgraphExtractionProblem[int]):
@@ -62,6 +65,7 @@ class SimpleProblem(SubgraphExtractionProblem[int]):
 # Test SubgraphState protocol
 # ---------------------------------------------------------------------------
 
+
 class TestSubgraphState:
     def test_protocol_accepted(self) -> None:
         s = SimpleState(graph=Graph[int]())
@@ -77,6 +81,7 @@ class TestSubgraphState:
 # Test ABC enforcement
 # ---------------------------------------------------------------------------
 
+
 class TestABCEnforcement:
     def test_cannot_instantiate(self) -> None:
         g = Graph[int]()
@@ -87,6 +92,7 @@ class TestABCEnforcement:
 # ---------------------------------------------------------------------------
 # Test SubgraphExtractionProblem
 # ---------------------------------------------------------------------------
+
 
 class TestSubgraphExtractionProblem:
     def test_init_defensive_copy(self) -> None:
@@ -120,6 +126,7 @@ class TestSubgraphExtractionProblem:
 # Test objective
 # ---------------------------------------------------------------------------
 
+
 class TestObjective:
     def test_objective(self) -> None:
         g = Graph[int]()
@@ -131,6 +138,7 @@ class TestObjective:
 # ---------------------------------------------------------------------------
 # Test enumerate_actions
 # ---------------------------------------------------------------------------
+
 
 class TestEnumerateActions:
     def test_empty_graph(self) -> None:
@@ -181,6 +189,7 @@ class TestEnumerateActions:
 
     def test_composite_actions_hook(self) -> None:
         """generate_composite_actions should be called."""
+
         class ProblemWithComposite(SimpleProblem):
             def generate_composite_actions(self, state: Any) -> list[Action]:
                 return [Action(ActionType.ADD_EDGE, (99, 100))]
@@ -196,6 +205,7 @@ class TestEnumerateActions:
 # ---------------------------------------------------------------------------
 # Test apply_action / undo_action
 # ---------------------------------------------------------------------------
+
 
 class TestApplyAction:
     def test_add_node(self) -> None:
@@ -283,6 +293,7 @@ class TestApplyAction:
 # Test _state_graph error handling
 # ---------------------------------------------------------------------------
 
+
 class TestStateGraph:
     def test_bad_state_type(self) -> None:
         g = Graph[int]()
@@ -296,10 +307,13 @@ class TestStateGraph:
 # Test SolverObserver
 # ---------------------------------------------------------------------------
 
+
 class TestSolverObserver:
     def test_null_observer(self) -> None:
         obs = NullObserver()
-        obs.on_action_evaluated(Action(ActionType.ADD_EDGE, (1, 2)), DeltaResult(1.0, 0.0, True), 1.0)
+        obs.on_action_evaluated(
+            Action(ActionType.ADD_EDGE, (1, 2)), DeltaResult(1.0, 0.0, True), 1.0
+        )
         obs.on_iteration_complete(0, None, 0.0)
         obs.on_convergence(0, 0.0)
 
@@ -318,6 +332,7 @@ class TestSolverObserver:
 # ---------------------------------------------------------------------------
 # Test edge cases
 # ---------------------------------------------------------------------------
+
 
 class TestEdgeCases:
     def test_add_edge_self_loop_via_action(self) -> None:

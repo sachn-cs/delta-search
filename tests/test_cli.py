@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 from typing import TYPE_CHECKING
 
@@ -41,9 +42,15 @@ class TestBuildParser:
 
     def test_solve_subcommand(self) -> None:
         parser = build_parser()
-        args = parser.parse_args([
-            "solve", "--problem", "mps", "--graph", "input.json",
-        ])
+        args = parser.parse_args(
+            [
+                "solve",
+                "--problem",
+                "mps",
+                "--graph",
+                "input.json",
+            ]
+        )
         assert args.command == "solve"
         assert args.problem == "mps"
         assert args.graph == "input.json"
@@ -56,9 +63,15 @@ class TestBuildParser:
 
     def test_solve_defaults(self) -> None:
         parser = build_parser()
-        args = parser.parse_args([
-            "solve", "--problem", "mps", "--graph", "input.json",
-        ])
+        args = parser.parse_args(
+            [
+                "solve",
+                "--problem",
+                "mps",
+                "--graph",
+                "input.json",
+            ]
+        )
         assert args.max_iterations == 1000
         assert args.max_evaluations is None
         assert args.stall is None
@@ -79,30 +92,31 @@ class TestMain:
         g = Graph[int].from_edges([(1, 2), (2, 3)])
         graph_file = tmp_path / "graph.json"
         save_graph(g, graph_file)
-        assert cmd_validate(
-            __import__("argparse").Namespace(graph=str(graph_file))
-        ) == 0
+        assert cmd_validate(argparse.Namespace(graph=str(graph_file))) == 0
 
     def test_validate_invalid_file(self, tmp_path: Path) -> None:
         graph_file = tmp_path / "bad.json"
         graph_file.write_text("not json")
-        assert cmd_validate(
-            __import__("argparse").Namespace(graph=str(graph_file))
-        ) == 1
+        assert cmd_validate(argparse.Namespace(graph=str(graph_file))) == 1
 
     def test_validate_nonexistent_file(self) -> None:
-        assert cmd_validate(
-            __import__("argparse").Namespace(graph="/nonexistent/file.json")
-        ) == 1
+        assert cmd_validate(argparse.Namespace(graph="/nonexistent/file.json")) == 1
 
     def test_solve_end_to_end(self, tmp_path: Path) -> None:
         g = Graph[int].from_edges([(1, 2), (2, 3), (3, 1)])
         graph_file = tmp_path / "graph.json"
         save_graph(g, graph_file)
-        result = main([
-            "solve", "--problem", "mps", "--graph", str(graph_file),
-            "--max-iterations", "10",
-        ])
+        result = main(
+            [
+                "solve",
+                "--problem",
+                "mps",
+                "--graph",
+                str(graph_file),
+                "--max-iterations",
+                "10",
+            ]
+        )
         assert result == 0
 
     def test_solve_with_output_file(self, tmp_path: Path) -> None:
@@ -110,10 +124,19 @@ class TestMain:
         graph_file = tmp_path / "graph.json"
         output_file = tmp_path / "result.json"
         save_graph(g, graph_file)
-        result = main([
-            "solve", "--problem", "mps", "--graph", str(graph_file),
-            "--output", str(output_file), "--max-iterations", "5",
-        ])
+        result = main(
+            [
+                "solve",
+                "--problem",
+                "mps",
+                "--graph",
+                str(graph_file),
+                "--output",
+                str(output_file),
+                "--max-iterations",
+                "5",
+            ]
+        )
         assert result == 0
         assert output_file.exists()
         data = json.loads(output_file.read_text())
@@ -124,8 +147,16 @@ class TestMain:
         g = Graph[int].from_edges([(1, 2)])
         graph_file = tmp_path / "graph.json"
         save_graph(g, graph_file)
-        result = main([
-            "solve", "--problem", "mps", "--graph", str(graph_file),
-            "--verbose", "--max-iterations", "3",
-        ])
+        result = main(
+            [
+                "solve",
+                "--problem",
+                "mps",
+                "--graph",
+                str(graph_file),
+                "--verbose",
+                "--max-iterations",
+                "3",
+            ]
+        )
         assert result == 0

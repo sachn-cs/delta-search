@@ -27,7 +27,9 @@ class SimpleProblem(SubgraphExtractionProblem[int]):
         return SimpleState(graph=Graph[int]())
 
     def calculate_delta(
-        self, current_state: SimpleState, candidate_action: Action,
+        self,
+        current_state: SimpleState,
+        candidate_action: Action,
     ) -> DeltaResult:
         if candidate_action.action_type is ActionType.ADD_EDGE:
             return DeltaResult(reward_change=1.0, penalty_change=0.0, feasible=True)
@@ -103,8 +105,10 @@ class TestGreedySolver:
         class TrackingObserver:
             def on_action_evaluated(self, action, delta, elapsed_ms):
                 events.append("evaluated")
+
             def on_iteration_complete(self, iteration, best_action, objective):
                 events.append("iteration")
+
             def on_convergence(self, iterations, final_objective):
                 events.append("converged")
 

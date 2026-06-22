@@ -21,11 +21,14 @@ Self-loops:
 from __future__ import annotations
 
 import copy
+import logging
 import threading
 from typing import TYPE_CHECKING, Any, Generic, Protocol, TypeVar, runtime_checkable
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, KeysView, ValuesView
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "Node",
@@ -75,6 +78,13 @@ class Graph(Generic[NodeT]):
         nodes: Iterable[NodeT] | None = None,
         edges: Iterable[tuple[NodeT, NodeT]] | None = None,
     ) -> None:
+        """Initialize the graph.
+
+        Args:
+            nodes: Optional iterable of nodes to add.
+            edges: Optional iterable of (u, v) edges to add.
+
+        """
         self.adj: dict[NodeT, set[NodeT]] = {}
         self.edge_attrs: dict[frozenset[NodeT], dict[str, Any]] = {}
         self.node_attrs: dict[NodeT, dict[str, Any]] = {}
@@ -97,6 +107,7 @@ class Graph(Generic[NodeT]):
 
         Returns:
             A new Graph containing all nodes and edges.
+
         """
         g: Graph[NodeT] = cls()
         for u, v in edges:
@@ -112,6 +123,7 @@ class Graph(Generic[NodeT]):
 
         Returns:
             An independent deep copy of ``other``.
+
         """
         return copy.deepcopy(other)
 
@@ -121,6 +133,7 @@ class Graph(Generic[NodeT]):
         Args:
             node: The node identifier.
             **attrs: Arbitrary keyword attributes stored on the node.
+
         """
         if node not in self.adj:
             self.adj[node] = set()
@@ -135,6 +148,7 @@ class Graph(Generic[NodeT]):
 
         Raises:
             KeyError: If ``node`` is not in the graph.
+
         """
         if node not in self.adj:
             raise KeyError(f"Node {node!r} not in graph")
@@ -153,6 +167,7 @@ class Graph(Generic[NodeT]):
 
         Returns:
             True if ``node`` is in the graph.
+
         """
         return node in self.adj
 
@@ -184,6 +199,7 @@ class Graph(Generic[NodeT]):
 
         Returns:
             Mutable attribute dictionary for the node.
+
         """
         return self.node_attrs.setdefault(node, {})
 
@@ -203,6 +219,7 @@ class Graph(Generic[NodeT]):
 
         Raises:
             ValueError: If ``u == v`` (self-loop).
+
         """
         if u == v:
             raise ValueError(
@@ -236,6 +253,7 @@ class Graph(Generic[NodeT]):
 
         Raises:
             KeyError: If the edge is not in the graph.
+
         """
         if not self.has_edge(u, v):
             raise KeyError(f"Edge ({u!r}, {v!r}) not in graph")
@@ -250,6 +268,7 @@ class Graph(Generic[NodeT]):
 
         Returns:
             True if the edge existed and was removed, False otherwise.
+
         """
         if not self.has_edge(u, v):
             return False
@@ -269,6 +288,7 @@ class Graph(Generic[NodeT]):
 
         Returns:
             True if the edge {u, v} exists.
+
         """
         return u in self.adj and v in self.adj[u]
 
@@ -291,6 +311,7 @@ class Graph(Generic[NodeT]):
 
         Returns:
             Attribute dictionary for the edge (may be empty).
+
         """
         key = frozenset((u, v))
         return self.edge_attrs.get(key, {})
@@ -306,6 +327,7 @@ class Graph(Generic[NodeT]):
 
         Raises:
             KeyError: If ``node`` is not in the graph.
+
         """
         return set(self.adj[node])
 
@@ -320,6 +342,7 @@ class Graph(Generic[NodeT]):
 
         Raises:
             KeyError: If ``node`` is not in the graph.
+
         """
         return len(self.adj[node])
 
@@ -332,6 +355,7 @@ class Graph(Generic[NodeT]):
 
         Returns:
             Set of nodes adjacent to both ``u`` and ``v``.
+
         """
         return self.adj[u] & self.adj[v]
 
@@ -346,6 +370,7 @@ class Graph(Generic[NodeT]):
 
         Returns:
             A new Graph induced by ``nodes``.
+
         """
         node_set: set[NodeT] = set(nodes)
         sub: Graph[NodeT] = Graph()
@@ -372,6 +397,7 @@ class Graph(Generic[NodeT]):
 
         Returns:
             A new Graph containing the given edges and their endpoints.
+
         """
         sub: Graph[NodeT] = Graph()
         for key in edge_keys:
@@ -395,6 +421,7 @@ class Graph(Generic[NodeT]):
 
         Returns:
             True if the edge was newly added.
+
         """
         if self.has_edge(u, v):
             return False
@@ -410,6 +437,7 @@ class Graph(Generic[NodeT]):
 
         Returns:
             True if the edge existed and was removed.
+
         """
         if not self.has_edge(u, v):
             return False
@@ -425,6 +453,7 @@ class Graph(Generic[NodeT]):
 
         Returns:
             True if the node was newly added.
+
         """
         if node in self.adj:
             return False
@@ -439,6 +468,7 @@ class Graph(Generic[NodeT]):
 
         Returns:
             True if the node existed and was removed.
+
         """
         if node not in self.adj:
             return False
@@ -484,6 +514,7 @@ class Graph(Generic[NodeT]):
 
         Returns:
             True when the node set is empty.
+
         """
         return self.num_nodes == 0
 
@@ -499,6 +530,7 @@ class Graph(Generic[NodeT]):
 
         Returns:
             List of all nodes in insertion order.
+
         """
         return list(self.adj.keys())
 
@@ -507,6 +539,7 @@ class Graph(Generic[NodeT]):
 
         Returns:
             List of degrees sorted from highest to lowest.
+
         """
         return sorted((len(nbrs) for nbrs in self.adj.values()), reverse=True)
 
@@ -518,6 +551,7 @@ class Graph(Generic[NodeT]):
 
         Returns:
             True if ``self`` is a subgraph of ``other``.
+
         """
         for n in self.adj:
             if n not in other.adj:
@@ -544,10 +578,17 @@ class ThreadSafeGraph(Graph[NodeT]):
         with g.lock:
             g.add_edge(1, 2)
             g.add_edge(2, 3)
-            print(g.num_nodes)  # consistent read
+            logging.info(g.num_nodes)  # consistent read
     """
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize the thread-safe graph.
+
+        Args:
+            *args: Positional arguments forwarded to the parent Graph.__init__.
+            **kwargs: Keyword arguments forwarded to the parent Graph.__init__.
+
+        """
         self.lock = threading.RLock()
         super().__init__(*args, **kwargs)
 
@@ -557,6 +598,7 @@ class ThreadSafeGraph(Graph[NodeT]):
         Args:
             node: The node identifier.
             **attrs: Arbitrary keyword attributes stored on the node.
+
         """
         with self.lock:
             super().add_node(node, **attrs)
@@ -569,6 +611,7 @@ class ThreadSafeGraph(Graph[NodeT]):
 
         Raises:
             KeyError: If ``node`` is not in the graph.
+
         """
         with self.lock:
             super().remove_node(node)
@@ -586,6 +629,7 @@ class ThreadSafeGraph(Graph[NodeT]):
 
         Raises:
             ValueError: If ``u == v`` (self-loop).
+
         """
         with self.lock:
             return super().add_edge(u, v, **attrs)
@@ -599,6 +643,7 @@ class ThreadSafeGraph(Graph[NodeT]):
 
         Raises:
             KeyError: If the edge is not in the graph.
+
         """
         with self.lock:
             super().remove_edge(u, v)
@@ -613,6 +658,7 @@ class ThreadSafeGraph(Graph[NodeT]):
 
         Returns:
             True if the edge was newly added.
+
         """
         with self.lock:
             return super().add_edge_delta(u, v, **attrs)
@@ -626,6 +672,7 @@ class ThreadSafeGraph(Graph[NodeT]):
 
         Returns:
             True if the edge existed and was removed.
+
         """
         with self.lock:
             return super().remove_edge_delta(u, v)
@@ -639,6 +686,7 @@ class ThreadSafeGraph(Graph[NodeT]):
 
         Returns:
             True if the node was newly added.
+
         """
         with self.lock:
             return super().add_node_delta(node, **attrs)
@@ -651,6 +699,7 @@ class ThreadSafeGraph(Graph[NodeT]):
 
         Returns:
             True if the node existed and was removed.
+
         """
         with self.lock:
             return super().remove_node_delta(node)
@@ -664,6 +713,7 @@ class ThreadSafeGraph(Graph[NodeT]):
 
         Returns:
             True if the edge existed and was removed.
+
         """
         with self.lock:
             return super().remove_edge_if_present(u, v)
@@ -676,6 +726,7 @@ class ThreadSafeGraph(Graph[NodeT]):
 
         Returns:
             True if ``node`` is in the graph.
+
         """
         with self.lock:
             return super().has_node(node)
@@ -689,6 +740,7 @@ class ThreadSafeGraph(Graph[NodeT]):
 
         Returns:
             True if the edge {u, v} exists.
+
         """
         with self.lock:
             return super().has_edge(u, v)
@@ -704,6 +756,7 @@ class ThreadSafeGraph(Graph[NodeT]):
 
         Raises:
             KeyError: If ``node`` is not in the graph.
+
         """
         with self.lock:
             return super().neighbors(node)
@@ -719,6 +772,7 @@ class ThreadSafeGraph(Graph[NodeT]):
 
         Raises:
             KeyError: If ``node`` is not in the graph.
+
         """
         with self.lock:
             return super().degree(node)
@@ -732,6 +786,7 @@ class ThreadSafeGraph(Graph[NodeT]):
 
         Returns:
             Set of nodes adjacent to both ``u`` and ``v``.
+
         """
         with self.lock:
             return super().common_neighbors(u, v)

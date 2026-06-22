@@ -33,13 +33,13 @@ def _require_networkx() -> None:
 
     Raises:
         ImportError: If networkx is not installed.
+
     """
     import importlib.util
 
     if importlib.util.find_spec("networkx") is None:
         raise ImportError(
-            "NetworkX is required for interop.  "
-            "Install it with: pip install networkx"
+            "NetworkX is required for interop.  Install it with: pip install networkx"
         )
 
 
@@ -58,14 +58,13 @@ def from_networkx(nx_graph: Any) -> Graph[Any]:
     Raises:
         ImportError: If NetworkX is not installed.
         TypeError: If ``nx_graph`` is not a ``networkx.Graph``.
+
     """
     _require_networkx()
     import networkx
 
     if not isinstance(nx_graph, networkx.Graph):
-        raise TypeError(
-            f"Expected a networkx.Graph, got {type(nx_graph).__name__}"
-        )
+        raise TypeError(f"Expected a networkx.Graph, got {type(nx_graph).__name__}")
 
     from .graph import Graph
 
@@ -93,6 +92,7 @@ def to_networkx(graph: Graph[Any]) -> Any:
 
     Raises:
         ImportError: If NetworkX is not installed.
+
     """
     _require_networkx()
     import networkx

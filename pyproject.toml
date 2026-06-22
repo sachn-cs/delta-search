@@ -46,11 +46,11 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/delta-search/delta-search"
-Repository = "https://github.com/delta-search/delta-search"
-"Bug Tracker" = "https://github.com/delta-search/delta-search/issues"
-Documentation = "https://github.com/delta-search/delta-search#readme"
-Changelog = "https://github.com/delta-search/delta-search/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/sachn-cs/delta-search"
+Repository = "https://github.com/sachn-cs/delta-search"
+"Bug Tracker" = "https://github.com/sachn-cs/delta-search/issues"
+Documentation = "https://github.com/sachn-cs/delta-search#readme"
+Changelog = "https://github.com/sachn-cs/delta-search/blob/master/CHANGELOG.md"
 "arXiv" = "https://arxiv.org/abs/2606.13834"
 
 [project.scripts]
@@ -96,6 +96,14 @@ warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
 module = "networkx"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tqdm"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "sklearn.*"
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

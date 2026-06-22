@@ -72,17 +72,13 @@ class TestSaveLoadGraph:
 
     def test_missing_edge_source(self, tmp_path: Path) -> None:
         bad_file = tmp_path / "no_source.json"
-        bad_file.write_text(
-            '{"nodes": [{"id": 1}], "edges": [{"target": 2}]}'
-        )
+        bad_file.write_text('{"nodes": [{"id": 1}], "edges": [{"target": 2}]}')
         with pytest.raises(KeyError):
             load_graph(bad_file)
 
     def test_missing_edge_target(self, tmp_path: Path) -> None:
         bad_file = tmp_path / "no_target.json"
-        bad_file.write_text(
-            '{"nodes": [{"id": 1}], "edges": [{"source": 1}]}'
-        )
+        bad_file.write_text('{"nodes": [{"id": 1}], "edges": [{"source": 1}]}')
         with pytest.raises(KeyError):
             load_graph(bad_file)
 
@@ -117,7 +113,7 @@ class TestSaveLoadGraph:
 
     def test_not_a_dict_raises(self, tmp_path: Path) -> None:
         bad_file = tmp_path / "list.json"
-        bad_file.write_text('[1, 2, 3]')
+        bad_file.write_text("[1, 2, 3]")
         with pytest.raises(ValueError, match="Expected a JSON object"):
             load_graph(bad_file)
 

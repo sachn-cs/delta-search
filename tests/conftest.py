@@ -27,9 +27,15 @@ def path_graph() -> Graph[int]:
 @pytest.fixture
 def dense_graph() -> Graph[int]:
     """Graph with 5 nodes and 8 edges."""
-    return Graph[int].from_edges([
-        (1, 2), (1, 3), (1, 4),
-        (2, 3), (2, 5),
-        (3, 4), (3, 5),
-        (4, 5),
-    ])
+    return Graph[int].from_edges(
+        [
+            (1, 2),
+            (1, 3),
+            (1, 4),
+            (2, 3),
+            (2, 5),
+            (3, 4),
+            (3, 5),
+            (4, 5),
+        ]
+    )

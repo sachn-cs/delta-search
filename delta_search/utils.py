@@ -42,6 +42,7 @@ def bfs_reachable(
 
     Returns:
         Set of all nodes reachable from at least one source.
+
     """
     if not sources:
         return set()
@@ -71,6 +72,7 @@ def is_connected(graph: Graph[NodeT]) -> bool:
     Returns:
         True if the graph has a single connected component.
         Returns True for empty graphs (vacuously true).
+
     """
     if graph.num_nodes == 0:
         return True
@@ -97,6 +99,7 @@ def connected_components(graph: Graph[NodeT]) -> list[set[NodeT]]:
 
     Returns:
         List of sets, each containing the nodes of one connected component.
+
     """
     remaining: set[NodeT] = set(graph.nodes)
     components: list[set[NodeT]] = []
@@ -133,6 +136,7 @@ def is_planary(graph: Graph[NodeT]) -> bool:
 
     Returns:
         True if the graph satisfies the planarity necessary condition.
+
     """
     if graph.num_edges == 0:
         return True
@@ -140,12 +144,7 @@ def is_planary(graph: Graph[NodeT]) -> bool:
     comps = connected_components(graph)
     for comp in comps:
         num_v = len(comp)
-        num_e = sum(
-            1
-            for u in comp
-            for v in graph.neighbors(u)
-            if v in comp and u < v
-        )
+        num_e = sum(1 for u in comp for v in graph.neighbors(u) if v in comp and u < v)
         if num_v >= 3 and num_e > 3 * num_v - 6:
             return False
     return True
@@ -166,6 +165,7 @@ def is_dominating_set(
 
     Returns:
         True if every non-selected node has a neighbor in ``selected``.
+
     """
     if not selected:
         return graph.num_nodes == 0
@@ -191,6 +191,7 @@ def is_independent_set(
 
     Returns:
         True if no two nodes in ``selected`` are adjacent.
+
     """
     return all(not graph.neighbors(node) & selected for node in selected)
 
@@ -211,6 +212,7 @@ def vertex_cover_cost(
 
     Returns:
         Sum of costs for all nodes in ``selected``.
+
     """
     costs = vertex_costs or {}
     return sum(costs.get(n, default_cost) for n in selected)

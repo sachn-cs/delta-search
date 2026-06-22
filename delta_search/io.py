@@ -39,6 +39,7 @@ def save_graph(graph: Graph[NodeT], path: str | Path) -> None:
     Args:
         graph: The graph to save.
         path: Output file path.
+
     """
     nodes: list[dict[str, Any]] = []
     for node in graph:
@@ -77,6 +78,7 @@ def load_graph(path: str | Path) -> Graph[Any]:
         KeyError: If required fields (``id``, ``source``, ``target``) are missing.
         ValueError: If the JSON structure is not a dict with ``nodes`` and
             ``edges`` arrays.
+
     """
     with open(path) as f:
         data = json.load(f)
@@ -86,9 +88,7 @@ def load_graph(path: str | Path) -> Graph[Any]:
             f"Expected a JSON object at top level, got {type(data).__name__}"
         )
     if "nodes" not in data and "edges" not in data:
-        raise ValueError(
-            "Graph JSON must contain 'nodes' and/or 'edges' keys"
-        )
+        raise ValueError("Graph JSON must contain 'nodes' and/or 'edges' keys")
 
     graph: Graph[Any] = Graph()
 

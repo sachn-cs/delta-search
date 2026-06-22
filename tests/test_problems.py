@@ -114,7 +114,8 @@ class TestMaximumWeightedIndependentSet:
     def test_weighted(self) -> None:
         g = Graph[int].from_edges([(1, 2)])
         problem = MaximumWeightedIndependentSetProblem(
-            g, vertex_weights={1: 10.0, 2: 5.0},
+            g,
+            vertex_weights={1: 10.0, 2: 5.0},
         )
         state = DefaultState(graph=Graph[int](nodes=[1]))
         assert problem.compute_reward(state) == 10.0
@@ -178,7 +179,8 @@ class TestMinimumWeightedSteinerTree:
     def test_basic(self) -> None:
         g = Graph[int].from_edges([(1, 2), (2, 3), (3, 1)])
         problem = MinimumWeightedSteinerTreeProblem(
-            g, terminals={1, 3},
+            g,
+            terminals={1, 3},
         )
         state = problem.evaluate_initial_state(g)
         assert state.graph.num_nodes == 0
@@ -187,7 +189,8 @@ class TestMinimumWeightedSteinerTree:
     def test_add_edge(self) -> None:
         g = Graph[int].from_edges([(1, 2), (2, 3)])
         problem = MinimumWeightedSteinerTreeProblem(
-            g, terminals={1, 3},
+            g,
+            terminals={1, 3},
         )
         state = DefaultState(graph=Graph[int](nodes=[1, 2, 3]))
         actions = problem.enumerate_actions(state)
@@ -197,7 +200,8 @@ class TestMinimumWeightedSteinerTree:
     def test_connected_terminals(self) -> None:
         g = Graph[int].from_edges([(1, 2), (2, 3)])
         problem = MinimumWeightedSteinerTreeProblem(
-            g, terminals={1, 3},
+            g,
+            terminals={1, 3},
         )
         state = DefaultState(graph=Graph[int].from_edges([(1, 2), (2, 3)]))
         assert problem.is_feasible(state)
@@ -205,7 +209,8 @@ class TestMinimumWeightedSteinerTree:
     def test_disconnected_terminals(self) -> None:
         g = Graph[int].from_edges([(1, 2), (2, 3)])
         problem = MinimumWeightedSteinerTreeProblem(
-            g, terminals={1, 3},
+            g,
+            terminals={1, 3},
         )
         state = DefaultState(graph=Graph[int](nodes=[1, 3]))
         assert not problem.is_feasible(state)
@@ -213,13 +218,11 @@ class TestMinimumWeightedSteinerTree:
     def test_terminal_not_removable(self) -> None:
         g = Graph[int].from_edges([(1, 2), (2, 3)])
         problem = MinimumWeightedSteinerTreeProblem(
-            g, terminals={1, 3},
+            g,
+            terminals={1, 3},
         )
         state = DefaultState(graph=Graph[int](nodes=[1, 2, 3]))
         actions = problem.enumerate_actions(state)
-        remove_actions = [
-            a for a in actions
-            if a.action_type.name == "REMOVE_NODE"
-        ]
+        remove_actions = [a for a in actions if a.action_type.name == "REMOVE_NODE"]
         assert len(remove_actions) == 1
         assert remove_actions[0].targets[0] == 2

@@ -9,9 +9,7 @@ import pytest
 from delta_search.graph import Graph
 
 has_networkx = importlib.util.find_spec("networkx") is not None
-skip_no_networkx = pytest.mark.skipif(
-    not has_networkx, reason="NetworkX not installed"
-)
+skip_no_networkx = pytest.mark.skipif(not has_networkx, reason="NetworkX not installed")
 
 
 @skip_no_networkx

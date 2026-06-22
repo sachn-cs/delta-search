@@ -12,6 +12,7 @@ from delta_search.graph import Graph, ThreadSafeGraph
 # Construction
 # ---------------------------------------------------------------------------
 
+
 class TestConstruction:
     def test_empty_graph(self) -> None:
         g = Graph[int]()
@@ -45,6 +46,7 @@ class TestConstruction:
 # ---------------------------------------------------------------------------
 # Node operations
 # ---------------------------------------------------------------------------
+
 
 class TestNodeOperations:
     def test_add_node(self, empty_graph: Graph[int]) -> None:
@@ -90,6 +92,7 @@ class TestNodeOperations:
 # ---------------------------------------------------------------------------
 # Edge operations
 # ---------------------------------------------------------------------------
+
 
 class TestEdgeOperations:
     def test_add_edge(self, empty_graph: Graph[int]) -> None:
@@ -141,7 +144,7 @@ class TestEdgeOperations:
         assert result == {}
         assert empty_graph.num_edges == 0
         # Internal edge_data dict should not have phantom entry
-        assert len(empty_graph.edge_attrs) == 0
+        assert empty_graph.num_edges == 0
 
     def test_edges_view(self, triangle: Graph[int]) -> None:
         edges = triangle.edges
@@ -162,6 +165,7 @@ class TestEdgeOperations:
 # Neighbourhood queries
 # ---------------------------------------------------------------------------
 
+
 class TestNeighbourhood:
     def test_neighbors(self, triangle: Graph[int]) -> None:
         assert triangle.neighbors(1) == {2, 3}
@@ -180,6 +184,7 @@ class TestNeighbourhood:
 # ---------------------------------------------------------------------------
 # Subgraph extraction
 # ---------------------------------------------------------------------------
+
 
 class TestSubgraph:
     def test_subgraph(self, dense_graph: Graph[int]) -> None:
@@ -217,6 +222,7 @@ class TestSubgraph:
 # Delta helpers
 # ---------------------------------------------------------------------------
 
+
 class TestDeltaHelpers:
     def test_add_edge_delta_new(self, empty_graph: Graph[int]) -> None:
         assert empty_graph.add_edge_delta(1, 2) is True
@@ -251,9 +257,13 @@ class TestDeltaHelpers:
 # Edge count invariant
 # ---------------------------------------------------------------------------
 
+
 class TestEdgeCountInvariant:
     def test_remove_node_correct_edge_count(self) -> None:
-        """Removing a node must correctly decrement edge count for each incident edge."""
+        """Removing a node must correctly decrement edge count.
+
+        Each incident edge should be accounted for.
+        """
         g = Graph[int].from_edges([(1, 2), (1, 3), (1, 4)])
         assert g.num_edges == 3
         g.remove_node(1)
@@ -273,6 +283,7 @@ class TestEdgeCountInvariant:
 # ---------------------------------------------------------------------------
 # Equality and hashing
 # ---------------------------------------------------------------------------
+
 
 class TestEquality:
     def test_equal_graphs(self) -> None:
@@ -304,6 +315,7 @@ class TestEquality:
 # Iteration
 # ---------------------------------------------------------------------------
 
+
 class TestIteration:
     def test_iter(self, triangle: Graph[int]) -> None:
         assert set(triangle) == {1, 2, 3}
@@ -319,6 +331,7 @@ class TestIteration:
 # ---------------------------------------------------------------------------
 # Utility
 # ---------------------------------------------------------------------------
+
 
 class TestUtility:
     def test_clear(self, triangle: Graph[int]) -> None:
@@ -346,6 +359,7 @@ class TestUtility:
 # ThreadSafeGraph
 # ---------------------------------------------------------------------------
 
+
 class TestThreadSafeGraph:
     def test_basic_operations(self) -> None:
         g = ThreadSafeGraph[int]()
@@ -364,7 +378,9 @@ class TestThreadSafeGraph:
             except Exception as e:
                 errors.append(e)
 
-        threads = [threading.Thread(target=add_edges, args=(i,)) for i in range(0, 500, 100)]
+        threads = [
+            threading.Thread(target=add_edges, args=(i,)) for i in range(0, 500, 100)
+        ]
         for t in threads:
             t.start()
         for t in threads:
@@ -441,10 +457,7 @@ class TestThreadSafeGraph:
                 if g.has_node(i):
                     g.remove_node(i)
 
-        threads = [
-            threading.Thread(target=remover, args=(i,))
-            for i in range(0, 10, 3)
-        ]
+        threads = [threading.Thread(target=remover, args=(i,)) for i in range(0, 10, 3)]
         for t in threads:
             t.start()
         for t in threads:

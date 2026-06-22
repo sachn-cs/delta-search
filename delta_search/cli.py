@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import importlib
 import json
+import logging
 import sys
 from typing import TYPE_CHECKING
 
@@ -20,6 +21,8 @@ if TYPE_CHECKING:
 
 from .io import load_graph
 from .solver import EarlyTerminationCondition, GreedySolver
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "import_problem",
@@ -53,6 +56,7 @@ def import_problem(name: str) -> type:
     Raises:
         ValueError: If ``name`` is not in the registry.
         ImportError: If the module cannot be imported.
+
     """
     if name not in PROBLEM_REGISTRY:
         raise ValueError(
@@ -63,9 +67,7 @@ def import_problem(name: str) -> type:
     module = importlib.import_module(module_path)
     cls = getattr(module, class_name)
     if not isinstance(cls, type):
-        raise ImportError(
-            f"{PROBLEM_REGISTRY[name]} is not a class"
-        )
+        raise ImportError(f"{PROBLEM_REGISTRY[name]} is not a class")
     return cls
 
 
@@ -74,6 +76,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     Returns:
         Configured ArgumentParser with solve and validate subcommands.
+
     """
     parser = argparse.ArgumentParser(
         prog="delta-search",
@@ -94,23 +97,28 @@ def add_solve_arguments(
 
     Args:
         subparsers: The subparsers action to add to.
+
     """
     solve_parser = subparsers.add_parser(
-        "solve", help="Run the solver on a graph.",
+        "solve",
+        help="Run the solver on a graph.",
     )
     solve_parser.add_argument(
-        "--problem", "-p",
+        "--problem",
+        "-p",
         required=True,
         choices=list(PROBLEM_REGISTRY.keys()),
         help="Problem type to solve.",
     )
     solve_parser.add_argument(
-        "--graph", "-g",
+        "--graph",
+        "-g",
         required=True,
         help="Path to input graph (JSON).",
     )
     solve_parser.add_argument(
-        "--max-iterations", "-n",
+        "--max-iterations",
+        "-n",
         type=int,
         default=1000,
         help="Maximum iterations (default: 1000).",
@@ -128,12 +136,14 @@ def add_solve_arguments(
         help="Stop after N iterations with no improvement.",
     )
     solve_parser.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         default=None,
         help="Output file for solution (JSON).",
     )
     solve_parser.add_argument(
-        "--verbose", "-v",
+        "--verbose",
+        "-v",
         action="store_true",
         help="Print progress to stderr.",
     )
@@ -146,12 +156,15 @@ def add_validate_arguments(
 
     Args:
         subparsers: The subparsers action to add to.
+
     """
     validate_parser = subparsers.add_parser(
-        "validate", help="Validate a graph file.",
+        "validate",
+        help="Validate a graph file.",
     )
     validate_parser.add_argument(
-        "--graph", "-g",
+        "--graph",
+        "-g",
         required=True,
         help="Path to input graph (JSON).",
     )
@@ -165,6 +178,7 @@ def cmd_solve(args: argparse.Namespace) -> int:
 
     Returns:
         Exit code (0 for success).
+
     """
     graph = load_graph(args.graph)
     problem_cls = import_problem(args.problem)
@@ -178,10 +192,9 @@ def cmd_solve(args: argparse.Namespace) -> int:
     solver = GreedySolver(problem, early_stop=early_stop)
 
     if args.verbose:
-        print(
+        logger.info(
             f"Problem: {args.problem}  "
             f"Graph: {graph.num_nodes} nodes, {graph.num_edges} edges",
-            file=sys.stderr,
         )
 
     result = solver.solve(max_iterations=args.max_iterations)
@@ -206,9 +219,9 @@ def cmd_solve(args: argparse.Namespace) -> int:
     if args.output:
         with open(args.output, "w") as f:
             json.dump(output, f, indent=2, default=str)
-        print(f"Solution written to {args.output}", file=sys.stderr)
+        logger.info(f"Solution written to {args.output}")
     else:
-        print(json.dumps(output, indent=2, default=str))
+        logger.info(json.dumps(output, indent=2, default=str))
 
     return 0
 
@@ -221,15 +234,16 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
     Returns:
         Exit code (0 for valid graph, 1 for invalid).
+
     """
     try:
         graph = load_graph(args.graph)
-        print(
+        logger.info(
             f"Valid graph: {graph.num_nodes} nodes, {graph.num_edges} edges",
         )
         return 0
     except (FileNotFoundError, json.JSONDecodeError, KeyError, ValueError) as e:
-        print(f"Invalid graph: {e}", file=sys.stderr)
+        logger.error(f"Invalid graph: {e}")
         return 1
 
 
@@ -241,6 +255,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     Returns:
         Exit code (0 for success, 1 for error or no command).
+
     """
     parser = build_parser()
     args = parser.parse_args(argv)

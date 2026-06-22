@@ -1,44 +1,42 @@
 <!-- Badges -->
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/delta-search/delta-search/actions/workflows/ci.yml/badge.svg)](https://github.com/delta-search/delta-search/actions/workflows/ci.yml)
+[![CI](https://github.com/sachn-cs/delta-search/actions/workflows/ci.yml/badge.svg)](https://github.com/sachn-cs/delta-search/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyPI version](https://img.shields.io/pypi/v/delta-search.svg)](https://pypi.org/project/delta-search/)
 [![Downloads](https://img.shields.io/pypi/dm/delta-search.svg)](https://pypi.org/project/delta-search/)
+[![Python 3.10+](https://img.shields.io/pypi/pyversions/delta-search.svg)](https://pypi.org/project/delta-search/)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![类型安全: mypy](https://img.shields.io/badge/types-mypy-strict-blue.svg)](https://mypy-lang.org/)
 
 # ΔSearch
 
 A general, fast heuristic framework for solving NP-hard subgraph extraction problems via Reward-Penalty optimization.
 
-## Disclaimer
-
-This is an **independent implementation** of the ΔSearch framework described in the paper below. It is **not affiliated with, endorsed by, or produced by the original authors** of the paper.
-
-**Algorithm Credit:** The ΔSearch algorithm was developed by [Rebin Silva Valan Arasu](https://github.com/raabarah) and [Rajiv Gupta](https://cse.ucr.edu/~gupta/) at the University of California, Riverside. If you use this software in academic work, please cite their paper.
-
-**Implementation Credit:** This Python package was written and maintained by [Sachin (sachn-cs)](https://github.com/sachn-cs).
-
-**Paper:** [Solving Subgraph Extraction Problems Using ΔSearch](https://arxiv.org/abs/2606.13834) (arXiv:2606.13834)
+> **ΔSearch** is an independent implementation of the algorithm from the paper
+> ["Solving Subgraph Extraction Problems Using ΔSearch"](https://arxiv.org/abs/2606.13834)
+> by Rebin Silva Valan Arasu and Rajiv Gupta at UC Riverside.
 
 ## Features
 
-- **General-purpose** — solves Maximum Planar Subgraph, UFLP, PCVC, Minimum Connected Dominating Set, MWIS, and MWST with a single framework
+- **General-purpose** — solves 6 NP-hard problems with a single framework
 - **O(1) incremental deltas** — evaluates candidate moves without re-evaluating the entire graph
 - **Undo-stack actions** — efficient state mutations with rollback support
 - **Thread-safe graph** — concurrent access via `ThreadSafeGraph` with `RLock`
 - **Observer protocol** — hook into solver lifecycle for logging, metrics, and tracing
 - **Zero dependencies** — pure Python standard library; optional NetworkX interop
 - **Fully typed** — `mypy --strict` compliant with `py.typed` marker
+- **Production-ready** — 320+ tests, CI/CD, security scanning, 80%+ coverage
 
 ## Installation
 
 ```bash
-# From source (recommended for development)
-git clone https://github.com/delta-search/delta-search.git
-cd delta-search
-pip install -e ".[dev]"
-
 # From PyPI
 pip install delta-search
+
+# From source (recommended for development)
+git clone https://github.com/sachn-cs/delta-search.git
+cd delta-search
+pip install -e ".[dev]"
 ```
 
 ## Quick Start
@@ -78,7 +76,7 @@ See [docs/getting-started.md](docs/getting-started.md) for a detailed walkthroug
 | `Action` | A single candidate mutation (add/remove node/edge) |
 | `ActionType` | Enum: `ADD_NODE`, `REMOVE_NODE`, `ADD_EDGE`, `REMOVE_EDGE` |
 | `DeltaResult` | `(reward_change, penalty_change, feasible)` |
-| `SubgraphState` | Protocol for state objects (must have `.graph`) |
+| `SubgraphState` | Protocol for state objects (must have `.graph`, `.metrics`) |
 | `SolverObserver` | Observer protocol for solver lifecycle events |
 | `GreedySolver` | Greedy optimization loop |
 | `SolverState` | Solver progress snapshot |
@@ -109,48 +107,86 @@ See [docs/getting-started.md](docs/getting-started.md) for a detailed walkthroug
 | Uncapacitated Facility Location | `UncapacitatedFacilityLocationProblem` | Non-monotone |
 | Minimum Weighted Steiner Tree | `MinimumWeightedSteinerTreeProblem` | Non-monotone |
 
+### Advanced Solvers
+
+| Solver | Description |
+|--------|-------------|
+| `MultiStartSolver` | Runs multiple random starts, returns best result |
+| `BeamSearchSolver` | Maintains top-k candidates per iteration |
+| `AnytimeSolver` | Tracks progress over time for anytime algorithms |
+| `LearnedGuidanceSolver` | Uses online ML to guide search |
+| `AdaptiveBeamSolver` | Diversity-aware beam selection |
+| `MultiObjectiveSolver` | Pareto-optimal multi-objective optimization |
+
 ## Project Structure
 
 ```
 delta-search/
-├── delta_search/          # Main package
-│   ├── __init__.py        # Public API exports
-│   ├── graph.py           # Graph data structures
-│   ├── problem.py         # Abstract problem interface
-│   ├── problems.py        # Concrete problem implementations
-│   ├── solver.py          # Greedy solver engine
-│   ├── utils.py           # Graph utility functions
-│   ├── interop.py         # NetworkX conversion
-│   ├── io.py              # JSON file I/O
-│   ├── cli.py             # Command-line interface
-│   └── py.typed           # PEP 561 marker
-├── tests/                 # Test suite (227 tests)
-│   ├── test_graph.py      # Graph unit tests
-│   ├── test_problem.py    # Problem framework tests
-│   ├── test_problems.py   # Concrete problem tests
-│   ├── test_solver.py     # Solver tests
-│   ├── test_utils.py      # Utility function tests
-│   ├── test_interop.py    # NetworkX interop tests
-│   ├── test_io.py         # File I/O tests
-│   ├── test_cli.py        # CLI integration tests
-│   └── conftest.py        # Shared fixtures
-├── docs/                  # Documentation
+├── delta_search/              # Main package
+│   ├── __init__.py            # Public API exports
+│   ├── graph.py               # Graph data structures
+│   ├── problem.py             # Abstract problem interface
+│   ├── problems.py            # 6 concrete problem implementations
+│   ├── solver.py              # Greedy solver engine
+│   ├── incremental.py         # Incremental data structures
+│   ├── multistart.py          # Multi-start solver
+│   ├── beam.py                # Beam search solver
+│   ├── anytime.py             # Anytime solver
+│   ├── learned.py             # Learned guidance solver
+│   ├── adaptive_beam.py       # Adaptive beam search
+│   ├── multi_objective.py     # Multi-objective optimization
+│   ├── streaming.py           # Streaming graph mutations
+│   ├── benchmarks.py          # Benchmark suite
+│   ├── visualization.py       # Plotting and export utilities
+│   ├── progress.py            # Progress bar and streaming output
+│   ├── context_engineering.py # RAG context selection
+│   ├── test_time_compute.py   # Reasoning tree expansion
+│   ├── budget_metrics.py      # Budget-aware evaluation
+│   ├── hybrid_pipeline.py     # Two-stage retrieval + reasoning
+│   ├── ablation.py            # Ablation study utilities
+│   ├── theory.py              # Theoretical analysis
+│   ├── utils.py               # Graph utility functions
+│   ├── interop.py             # NetworkX conversion
+│   ├── io.py                  # JSON file I/O
+│   ├── cli.py                 # Command-line interface
+│   └── py.typed               # PEP 561 marker
+├── tests/                     # Test suite (320+ tests)
+│   ├── test_graph.py          # Graph unit tests
+│   ├── test_problem.py        # Problem framework tests
+│   ├── test_problems.py       # Concrete problem tests
+│   ├── test_solver.py         # Solver tests
+│   ├── test_new_solvers.py    # Advanced solver tests
+│   ├── test_applications.py   # Application module tests
+│   ├── test_ablation_theory.py # Ablation and theory tests
+│   ├── test_multistart.py     # Multi-start solver tests
+│   ├── test_benchmarks.py     # Benchmark suite tests
+│   ├── test_visualization.py  # Visualization tests
+│   ├── test_progress.py       # Progress observer tests
+│   ├── test_utils.py          # Utility function tests
+│   ├── test_interop.py        # NetworkX interop tests
+│   ├── test_io.py             # File I/O tests
+│   ├── test_cli.py            # CLI integration tests
+│   └── conftest.py            # Shared fixtures
+├── docs/                      # Documentation
 │   ├── getting-started.md
 │   ├── architecture.md
+│   ├── deployment.md
 │   └── faq.md
-├── .github/               # GitHub configuration
+├── .github/                   # GitHub configuration
 │   ├── workflows/
-│   │   ├── ci.yml         # CI pipeline
-│   │   └── release.yml    # PyPI release automation
+│   │   ├── ci.yml             # CI pipeline
+│   │   └── release.yml        # PyPI release automation
 │   ├── ISSUE_TEMPLATE/
+│   │   ├── bug_report.md
+│   │   └── feature_request.md
 │   ├── PULL_REQUEST_TEMPLATE.md
 │   └── dependabot.yml
 ├── .pre-commit-config.yaml
-├── pyproject.toml         # Package configuration
-├── CHANGELOG.md           # Version history
-├── CONTRIBUTING.md        # Contribution guide
-├── CODE_OF_CONDUCT.md     # Community standards
-└── SECURITY.md            # Security policy
+├── pyproject.toml             # Package configuration
+├── CHANGELOG.md               # Version history
+├── CONTRIBUTING.md            # Contribution guide
+├── CODE_OF_CONDUCT.md         # Community standards
+└── SECURITY.md                # Security policy
 ```
 
 ## Development
@@ -190,6 +226,24 @@ delta-search validate --graph input.json
 # Available problems: mps, mcds, mwis, pcvc, uflp, mwst
 ```
 
+## Configuration
+
+ΔSearch has zero runtime dependencies and requires no configuration. All settings are passed via constructor arguments.
+
+### Environment Variables
+
+No environment variables are required for core functionality.
+
+### Development Configuration
+
+```bash
+# Install pre-commit hooks
+pre-commit install
+
+# Run all checks
+pre-commit run --all-files
+```
+
 ## Tech Stack
 
 - **Language:** Python 3.10+
@@ -211,10 +265,19 @@ delta-search validate --graph input.json
 - [x] PEP 561 typed package
 - [x] CI with lint, typecheck, security scan, tests
 - [x] PyPI release automation
-- [ ] Benchmark suite against paper results
-- [ ] Multi-start / randomized solver
-- [ ] Visualization utilities
-- [ ] Progress bar / streaming output
+- [x] Benchmark suite against paper results
+- [x] Multi-start / randomized solver
+- [x] Visualization utilities
+- [x] Progress bar / streaming output
+- [x] Context engineering for RAG
+- [x] Test-time compute for reasoning
+- [x] Multi-objective optimization
+- [x] Learned heuristic guidance
+- [x] Adaptive beam search
+- [x] Hybrid pipeline
+- [ ] GPU acceleration for large graphs
+- [ ] Distributed computing support
+- [ ] Web-based visualization dashboard
 
 ## Contributing
 

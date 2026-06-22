@@ -68,32 +68,37 @@ class SubgraphState(Protocol[NodeT]):
     """Protocol that all delta search state objects must satisfy.
 
     The state must expose a ``graph`` attribute containing the current
-    candidate subgraph, and an ``undo`` attribute that stores reversal
-    information for the last applied action.  Additional cached metrics
-    are permitted.
+    candidate subgraph, an ``undo`` attribute that stores reversal
+    information for the last applied action, and a ``metrics`` dict for
+    caching problem-specific incremental data.
     """
 
     graph: Graph[NodeT]
 
     undo: UndoEntry | None
 
+    metrics: dict[str, Any]
+
 
 @dataclass
-class DefaultState:
+class DefaultState(Generic[NodeT]):
     """Default mutable state for problem implementations.
 
     Attributes:
         graph: The current candidate subgraph.
         metrics: Cached problem-specific metrics.
         undo: Reversal information for the last applied action.
+
     """
-    graph: Graph[Any] = field(default_factory=Graph)
+
+    graph: Graph[NodeT] = field(default_factory=Graph)
     metrics: dict[str, Any] = field(default_factory=dict)
     undo: UndoEntry | None = field(default=None, repr=False)
 
 
 class ActionType(Enum):
     """Primitive mutations the solver can propose."""
+
     ADD_NODE = auto()
     REMOVE_NODE = auto()
     ADD_EDGE = auto()
@@ -108,6 +113,7 @@ class Action(NamedTuple):
     - ``ADD_NODE`` / ``REMOVE_NODE``: targets = (node,)
     - ``ADD_EDGE`` / ``REMOVE_EDGE``: targets = (u, v)
     """
+
     action_type: ActionType
     targets: tuple[Any, ...]
     metadata: dict[str, Any] | None = None
@@ -122,7 +128,9 @@ class DeltaResult(NamedTuple):
         penalty_change: Signed change in constraint violation cost.
             Negative means worse.
         feasible: Whether the resulting state satisfies all hard constraints.
+
     """
+
     reward_change: float
     penalty_change: float
     feasible: bool
@@ -137,7 +145,9 @@ class UndoEntry(NamedTuple):
         edge_data: Edge attributes to restore (for edge actions).
         node_data: Node attributes to restore (for node removal).
         neighbor_data: Per-neighbor edge attributes to restore (for node removal).
+
     """
+
     action_type: ActionType
     targets: tuple[Any, ...]
     edge_data: dict[str, Any] | None = None
@@ -155,7 +165,10 @@ class SolverObserver(Protocol):
     """
 
     def on_action_evaluated(
-        self, action: Action, delta: DeltaResult, elapsed_ms: float,
+        self,
+        action: Action,
+        delta: DeltaResult,
+        elapsed_ms: float,
     ) -> None:
         """Called after each candidate action is evaluated.
 
@@ -163,10 +176,14 @@ class SolverObserver(Protocol):
             action: The action that was evaluated.
             delta: The delta result from ``calculate_delta``.
             elapsed_ms: Wall-clock time for this evaluation in milliseconds.
+
         """
 
     def on_iteration_complete(
-        self, iteration: int, best_action: Action | None, objective: float,
+        self,
+        iteration: int,
+        best_action: Action | None,
+        objective: float,
     ) -> None:
         """Called at the end of each solver iteration.
 
@@ -174,6 +191,7 @@ class SolverObserver(Protocol):
             iteration: Zero-indexed iteration number.
             best_action: The action selected for application, or None.
             objective: The objective value of the best action.
+
         """
 
     def on_convergence(self, iterations: int, final_objective: float) -> None:
@@ -182,6 +200,7 @@ class SolverObserver(Protocol):
         Args:
             iterations: Total iterations completed.
             final_objective: Best objective value found.
+
         """
 
 
@@ -189,17 +208,43 @@ class NullObserver:
     """Default no-op observer that silently discards all events."""
 
     def on_action_evaluated(
-        self, action: Action, delta: DeltaResult, elapsed_ms: float,
+        self,
+        action: Action,
+        delta: DeltaResult,
+        elapsed_ms: float,
     ) -> None:
-        pass
+        """No-op implementation.
+
+        Args:
+            action: The action that was evaluated.
+            delta: The delta result from ``calculate_delta``.
+            elapsed_ms: Wall-clock time for this evaluation in milliseconds.
+
+        """
 
     def on_iteration_complete(
-        self, iteration: int, best_action: Action | None, objective: float,
+        self,
+        iteration: int,
+        best_action: Action | None,
+        objective: float,
     ) -> None:
-        pass
+        """No-op implementation.
+
+        Args:
+            iteration: Zero-indexed iteration number.
+            best_action: The action selected for application, or None.
+            objective: The objective value of the best action.
+
+        """
 
     def on_convergence(self, iterations: int, final_objective: float) -> None:
-        pass
+        """No-op implementation.
+
+        Args:
+            iterations: Total iterations completed.
+            final_objective: Best objective value found.
+
+        """
 
 
 class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
@@ -210,6 +255,7 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
         defensive_copy: If True (default), the input graph is deep-copied to
             prevent accidental mutation of the original.  Set to False for
             read-only problems where the copy overhead matters.
+
     """
 
     def __init__(
@@ -218,10 +264,19 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
         *,
         defensive_copy: bool = True,
     ) -> None:
-        self.input_graph: Graph[NodeT] = (
+        """Initialize the subgraph extraction problem.
+
+        Args:
+            graph: The input (complete) graph from which subgraphs are extracted.
+            defensive_copy: If True (default), the input graph is deep-copied to
+                prevent accidental mutation of the original. Set to False for
+                read-only problems where the copy overhead matters.
+
+        """
+        self._input_graph: Graph[NodeT] = (
             Graph.from_copy(graph) if defensive_copy else graph
         )
-        self.observers: list[SolverObserver] = [NullObserver()]
+        self._observers: list[SolverObserver] = [NullObserver()]
 
     @property
     def graph(self) -> Graph[NodeT]:
@@ -229,8 +284,9 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
 
         Returns:
             The immutable input graph used for action enumeration.
+
         """
-        return self.input_graph
+        return self._input_graph
 
     @property
     def observer(self) -> SolverObserver:
@@ -238,16 +294,28 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
 
         Returns:
             The primary observer receiving lifecycle events.
+
         """
-        return self.observers[0]
+        return self._observers[0]
+
+    @property
+    def observers(self) -> list[SolverObserver]:
+        """Read-only access to the observer list.
+
+        Returns:
+            A copy of the observer list.
+
+        """
+        return list(self._observers)
 
     def set_observer(self, observer: SolverObserver) -> None:
         """Replace all observers with a single observer.
 
         Args:
             observer: The new primary observer.
+
         """
-        self.observers = [observer]
+        self._observers = [observer]
 
     def add_observer(self, observer: SolverObserver) -> None:
         """Add an observer to the observer list.
@@ -257,16 +325,18 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
 
         Args:
             observer: The observer to append.
+
         """
-        self.observers.append(observer)
+        self._observers.append(observer)
 
     def remove_observer(self, observer: SolverObserver) -> None:
         """Remove an observer from the observer list.
 
         Args:
             observer: The observer to remove.
+
         """
-        self.observers = [o for o in self.observers if o is not observer]
+        self._observers = [o for o in self._observers if o is not observer]
 
     @abc.abstractmethod
     def evaluate_initial_state(self, graph: Graph[NodeT]) -> SubgraphState[NodeT]:
@@ -277,6 +347,7 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
 
         Returns:
             The initial candidate state.
+
         """
 
     @abc.abstractmethod
@@ -298,6 +369,7 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
 
         Returns:
             A DeltaResult with reward_change, penalty_change, and feasible.
+
         """
 
     @abc.abstractmethod
@@ -312,6 +384,7 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
 
         Returns:
             The scalar reward value.
+
         """
 
     @abc.abstractmethod
@@ -327,6 +400,7 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
 
         Returns:
             The scalar penalty value.
+
         """
 
     @abc.abstractmethod
@@ -342,6 +416,7 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
 
         Returns:
             True if the state satisfies all hard constraints.
+
         """
 
     def enumerate_actions(self, state: SubgraphState[NodeT]) -> list[Action]:
@@ -360,6 +435,7 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
 
         Returns:
             List of candidate actions to evaluate.
+
         """
         actions: list[Action] = []
         seen_edges: set[frozenset[NodeT]] = set()
@@ -368,7 +444,7 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
         current_edges: frozenset[frozenset[NodeT]] = frozenset(
             self.state_graph(state).edges
         )
-        all_nodes: set[NodeT] = set(self.input_graph.nodes)
+        all_nodes: set[NodeT] = set(self._input_graph.nodes)
 
         for n in all_nodes - current_nodes:
             actions.append(Action(ActionType.ADD_NODE, (n,)))
@@ -377,7 +453,7 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
             actions.append(Action(ActionType.REMOVE_NODE, (n,)))
 
         for n in current_nodes:
-            for nb in self.input_graph.neighbors(n):
+            for nb in self._input_graph.neighbors(n):
                 if nb in current_nodes:
                     u, v = (n, nb) if n < nb else (nb, n)
                     ekey = frozenset((u, v))
@@ -394,7 +470,8 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
         return actions
 
     def generate_composite_actions(
-        self, state: SubgraphState[NodeT],
+        self,
+        state: SubgraphState[NodeT],
     ) -> list[Action]:
         """Override to add compound actions (e.g. add node + edge together).
 
@@ -406,6 +483,7 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
 
         Returns:
             List of composite actions, or empty for atomic-only moves.
+
         """
         return []
 
@@ -429,6 +507,7 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
 
         Returns:
             A new state with the action applied.
+
         """
         new_state = copy.copy(state)
         original_graph: Graph[NodeT] = self.state_graph(state)
@@ -483,7 +562,8 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
         return new_state
 
     def undo_action(
-        self, state: SubgraphState[NodeT],
+        self,
+        state: SubgraphState[NodeT],
     ) -> SubgraphState[NodeT]:
         """Reverse the last ``apply_action`` using the stored undo entry.
 
@@ -499,6 +579,7 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
 
         Raises:
             RuntimeError: If no undo information is available.
+
         """
         undo: UndoEntry | None = state.undo
         if undo is None:
@@ -534,6 +615,7 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
         Args:
             state: The current candidate state.
             iteration: Zero-indexed iteration number.
+
         """
 
     def on_iteration_end(self, state: SubgraphState[NodeT], iteration: int) -> None:
@@ -542,6 +624,7 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
         Args:
             state: The current candidate state.
             iteration: Zero-indexed iteration number.
+
         """
 
     def state_graph(self, state: Any) -> Graph[NodeT]:
@@ -555,6 +638,7 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
 
         Raises:
             TypeError: If the state has no ``.graph`` attribute.
+
         """
         if not hasattr(state, "graph"):
             raise TypeError(
@@ -576,12 +660,14 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
         Args:
             state: The state to modify.
             graph: The new graph to embed.
+
         """
         state.graph = graph
 
     @staticmethod
     def node_data_snapshot(
-        graph: Graph[NodeT], node: NodeT,
+        graph: Graph[NodeT],
+        node: NodeT,
     ) -> dict[str, Any]:
         """Snapshot node attributes for undo support.
 
@@ -591,6 +677,7 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
 
         Returns:
             Copy of the node's attribute dictionary.
+
         """
         return dict(graph.node_data(node))
 
@@ -605,6 +692,7 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
 
         Returns:
             The combined objective value.
+
         """
         return self.compute_reward(state) - self.compute_penalty(state)
 
@@ -612,6 +700,6 @@ class SubgraphExtractionProblem(abc.ABC, Generic[NodeT]):
         """String representation."""
         return (
             f"{type(self).__name__}("
-            f"nodes={self.input_graph.num_nodes}, "
-            f"edges={self.input_graph.num_edges})"
+            f"nodes={self._input_graph.num_nodes}, "
+            f"edges={self._input_graph.num_edges})"
         )
